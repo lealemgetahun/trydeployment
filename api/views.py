@@ -8,49 +8,22 @@ from api.serializers import  ClassifySerializer, responceSerializer
 from rest_framework.response import Response
 from rest_framework.views import APIView
 import ai
-# Create your views here.
-# class UserViewSet(viewsets.ModelViewSet):
-#     """
-#     API endpoint that allows users to be viewed or edited.
-#     """
-#     queryset = User.objects.all().order_by('-date_joined')
-#     serializer_class = UserSerializer
-#     permission_classes = [permissions.AllowAny]
 from tensorflow.keras.models import load_model
 import numpy as np
 import cv2
-# class ClassifyViewSet(viewsets.ModelViewSet):
-#     """
-#     API endpoint that allows groups to be viewed or edited.
-#     """
-#     queryset = Classify.objects.all()
-#     serializer_class = ClassifySerializer
-#     permission_classes = [permissions.AllowAny]
-# @api_view(['POST',])
-# def Classify(request):
-        
-#         classify = Classify()
-#         if request.method == "POST":
-#             serializer = ClassifySerializer(classify, data=request.data)
+import urllib
 
-#             data = {}
+# METHOD #1: OpenCV, NumPy, and urllib
+def url_to_image(url):
+    # download the image, convert it to a NumPy array, and then read
+    # it into OpenCV format
 
-#             image = classify.image()
+    req = urllib.request.urlopen(url)
+    arr = np.asarray(bytearray(req.read()), dtype=np.uint8)
+    img = cv2.imdecode(arr, -1)
 
-#             img_arr=cv2.imread(image)
-
-#             img_arr=cv2.resize(img_arr,(224,224))
-
-#             test = np.array(img_arr)
-#             test = test/255.0
-
-#             aimodel = load_model("../Documents/Python Scripts/Project Model/aiModel.h5")
-#             predict = aimodel.predict(test)
-#             data['spam'] = np.argmax(predict)
-            
-        
-#             return Response(data = data, status=status.HTTP_404_NOT_FOUND)  
-        
+    return img
+    
                 
 class ClassifyImage(APIView):
     serializer_class =ClassifySerializer
@@ -63,42 +36,27 @@ class ClassifyImage(APIView):
             classify = Classify()
         
             serializer = ClassifySerializer(classify, data=request.data)
-            classify.image = request.data.get('image',"")
-            classify.save()
-           
+
+            url = request.data.get('image',"")
+            print("url......",url)
+            image = url_to_image(url)
+
             data = {}
-            
-
-            image = classify.image
-
-            print(image)
-            img_arr=cv2.imread(str(image))
-
-            img_arr=cv2.resize(img_arr,(224,224))
+   
+            img_arr=cv2.resize(image,(224,224))
 
             test = np.array([img_arr])
             test = test/255.0
 
-            aimodel = load_model("ai/aiModel.h5")
+            aimodel = load_model("ai/model_aug.h5")
+           
             predict = aimodel.predict(test)
            
-            print(predict)
-
             data['spam'] = np.argmax(predict)
-            # return Response(status=status.HTTP_200_OK)
+            print(np.argmax(predict))
+
             return Response(data = data, status=status.HTTP_200_OK)  
         else:
             data['error'] = 0
             return Response(data = data, status = status.HTTP_404_NOT_FOUND)
-# class UserDetailView(generics.GenericAPIView):
-#     queryset = [Human.objects.all(), Hero.objects.all()]
-#     serializer_class = HumanSerializers
-#     permission_classes = [permissions.AllowAny ]
-#     def post(self, request):
-#         user = User.objects.get(id=request.user.id)
 
-#         if user:
-#             ser = UserSerializers(user)
-#             return JsonResponse({"user_detail":ser.data}, status=status.HTTP_200_OK)
-#         else:
-#             return JsonResponse({"error":"User Doesnot exist"}, status=status.HTTP_404_NOT_FOUND)
